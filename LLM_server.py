@@ -2,8 +2,7 @@ import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.chat_models import ChatOllama
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint, HuggingFaceEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
@@ -28,8 +27,17 @@ if uploaded_file is not None:
     splits = text_splitter.split_documents(docs)
 
     # LLM and Embeddings
-    llm = ChatOllama(model="deepseek-r1:1.5b-qwen-distill-q4_K_M")
-    vectorstore = Chroma.from_documents(documents=splits, embedding=OllamaEmbeddings(model='all-minilm'))
+    llm = HuggingFaceEndpoint(
+        repo_id="jdqqjr/DeepSeek-R1-Distill-Llama-3.2-1B-Instruct",
+        task="text-generation",
+        max_new_tokens=512,
+        do_sample=False,
+        repetition_penalty=1.03,
+    )
+    chat_model = ChatHuggingFace(llm=llm)
+    llm_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    vectorstore = Chroma.from_documents(documents=splits,
+                                        embedding=llm_embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
     # Prompt
